@@ -22,3 +22,8 @@ Arquivos atuais:
 - ADR-008-estrategia-testes-quality-gate.md
 - ADR-009-versionamento-api.md
 - ADR-010-observabilidade-minima-erros.md
+- ADR-011-Transição-PostgreSQL-Prisma-ORM.md
+- ADR-012-segregacao-4-repositorios-cicd.md
+- ADR-013-seguranca-apigateway-jwt-rbac.md
+- ADR-014-hpa-metrics-server.md
+- ADR-015-observabilidade-json-logs-metricas.md

@@ -1,0 +1,45 @@
+flowchart TB
+    Client(["Cliente / Navegador / Postman"])
+
+    subgraph AWS["AWS (us-east-1)"]
+        subgraph Serverless["Repositorio 2 - oficina-lambda-auth"]
+            APIGW["API Gateway HTTP API\nPOST /auth"]
+            Lambda["Lambda oficina-auth\n(Node.js 20, VPC)"]
+            DLQ[("SQS DLQ")]
+            SM[("Secrets Manager\ndb-credentials")]
+        end
+
+        subgraph K8sInfra["Repositorio 3 - oficina-k8s-infrastructure"]
+            EKS["EKS Control Plane"]
+            subgraph Nodes["Node Group (t3.small)"]
+                App["Repositorio 4 - oficina-app\nPods NestJS (2x, HPA 2-5)"]
+                Metrics["Metrics Server"]
+            end
+        end
+
+        subgraph DbInfra["Repositorio 1 - oficina-db-infrastructure"]
+            RDS[("RDS PostgreSQL 16\ndb.t3.micro")]
+            SSM[("SSM Parameter Store\n/oficina/env/db/*")]
+        end
+
+        VPC["VPC compartilhada\n(subnets privadas)"]
+    end
+
+    Client -- "1. POST /auth {cpf}" --> APIGW
+    APIGW --> Lambda
+    Lambda -- "SELECT cliente" --> RDS
+    Lambda -. "falha assincrona" .-> DLQ
+    Lambda -. "credenciais espelhadas (deploy-time)" .-> SM
+    Client -- "2. Bearer JWT" --> App
+    App -- "Prisma / SQL" --> RDS
+    App -- "credenciais (deploy-time)" .-> SSM
+    Metrics -- "metrics.k8s.io" --> App
+    EKS -.-> Nodes
+
+    RDS -.-> VPC
+    Lambda -.-> VPC
+    Nodes -.-> VPC
+
+    style Serverless fill:#f4f0ff,stroke:#7c5cff
+    style K8sInfra fill:#eafaf1,stroke:#2ecc71
+    style DbInfra fill:#fff4e5,stroke:#e67e22
