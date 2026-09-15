@@ -110,8 +110,14 @@ jobs:
       - name: Update kubeconfig (cluster do Repositorio 3)
         run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
 
-      - name: Aplicar namespace
-        run: kubectl apply -f k8s/00-namespace.yaml
+      # O namespace 'oficina' e um recurso de escopo de CLUSTER, criado uma
+      # unica vez pelo administrador do cluster (Repositorio 3). A IAM Role
+      # deste repo tem acesso EKS escopado apenas ao namespace 'oficina'
+      # (AmazonEKSEditPolicy com access_scope de namespace), entao nao tem
+      # permissao RBAC para criar/gerenciar o objeto Namespace em si - so
+      # confirmamos aqui que ele ja existe.
+      - name: Verificar namespace
+        run: kubectl get namespace oficina
 
       - name: Aplicar ConfigMap (com endpoint do RDS)
         env:

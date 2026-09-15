@@ -89,7 +89,7 @@ Pipeline definida em [`.github/workflows/ci-cd-app.yml`](.github/workflows/ci-cd
 1. **lint-test**: eslint, build, `jest`, `test:cov:critical` (>= 80%).
 2. **docker-build-push**: build multi-stage, push para GHCR (`sha-<7chars>`).
 3. **deploy** (push `main`, gated por Environment `production`):
-   `aws eks update-kubeconfig` → aplica namespace/ConfigMap/Secret → roda o
+   `aws eks update-kubeconfig` → confirma o namespace/ConfigMap/Secret → roda o
    Job de migration e aguarda conclusão → aplica Deployment/Service/HPA →
    aguarda rollout.
 
@@ -99,6 +99,30 @@ Pipeline definida em [`.github/workflows/ci-cd-app.yml`](.github/workflows/ci-cd
   Repo 3), `DB_HOST`, `DB_PORT`, `DB_NAME`, `DATABASE_URL`, `JWT_SECRET`
   (**idêntico** ao do Repositório 2), `EXTERNAL_WEBHOOK_TOKEN`.
 - Branch protection + Environment `production`, mesmo padrão dos demais repositórios.
+
+### Bootstrap manual (uma única vez): namespace do cluster
+
+A IAM Role deste repositório tem acesso ao EKS **escopado ao namespace
+`oficina`** (via EKS Access Entry + `AmazonEKSEditPolicy` com
+`access_scope` de namespace, configurado no Repositório 3). Isso significa
+que ela **não tem permissão RBAC para criar o objeto `Namespace` em si**
+(é um recurso de escopo de cluster). Quem administra o cluster (Repositório
+3) precisa criar o namespace uma única vez:
+
+```bash
+kubectl apply -f k8s/00-namespace.yaml
+```
+
+Depois disso, o pipeline de deploy só precisa confirmar que ele existe.
+
+### Nota sobre o claim `sub` do OIDC do GitHub Actions
+
+Ao configurar a IAM Role deste repositório (e das demais), descobrimos que
+o claim `sub` do token OIDC do GitHub Actions pode incluir IDs numéricos
+imutáveis do usuário/repositório (formato `repo:owner@ID/repo@ID:...`), não
+documentado nos exemplos padrão da AWS. A trust policy da IAM Role precisa
+de padrões `StringLike` com wildcard (`repo:owner@*/repo@*:...`) para
+cobrir esse formato, além do formato tradicional sem ID.
 
 ## Acessar a API e os dashboards ao vivo
 
