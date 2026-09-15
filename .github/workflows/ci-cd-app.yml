@@ -139,7 +139,7 @@ jobs:
           image_tag: "sha-${{ needs.docker-build-push.outputs.short-sha }}"
           image_pull_policy: "IfNotPresent"
         run: |
-          IMAGE_REGISTRY_LOWER=$(echo "$image_registry${{ github.repository_owner }}/" | tr '[:upper:]' '[:lower:]')
+          IMAGE_REGISTRY_LOWER=$(echo "${image_registry}${{ github.repository_owner }}/" | tr '[:upper:]' '[:lower:]')
           kubectl delete job/prisma-migrate -n oficina --ignore-not-found
           image_registry="$IMAGE_REGISTRY_LOWER" envsubst < k8s/02-migrate-job.tpl.yaml | kubectl apply -f -
           kubectl wait --for=condition=complete job/prisma-migrate -n oficina --timeout=300s \
@@ -153,7 +153,7 @@ jobs:
           image_tag: "sha-${{ needs.docker-build-push.outputs.short-sha }}"
           image_pull_policy: "IfNotPresent"
         run: |
-          IMAGE_REGISTRY_LOWER=$(echo "$image_registry${{ github.repository_owner }}/" | tr '[:upper:]' '[:lower:]')
+          IMAGE_REGISTRY_LOWER=$(echo "${image_registry}${{ github.repository_owner }}/" | tr '[:upper:]' '[:lower:]')
           image_registry="$IMAGE_REGISTRY_LOWER" envsubst < k8s/02-deployment.tpl.yaml | kubectl apply -f -
           kubectl apply -f k8s/02-service-clusterip.yaml
           kubectl apply -f k8s/02-hpa.yaml
