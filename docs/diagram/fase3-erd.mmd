@@ -1,0 +1,58 @@
+erDiagram
+    CLIENTE ||--o{ ORDEM_SERVICO : possui
+    VEICULO ||--o{ ORDEM_SERVICO : "e alvo de"
+    ORDEM_SERVICO ||--o{ ITEM_ORDEM_SERVICO : contem
+    ORDEM_SERVICO ||--o{ ORDEM_SERVICO_STATUS_HISTORICO : "registra transicoes em"
+
+    CLIENTE {
+        string id PK
+        string nome
+        string documento UK "CPF usado no login via Lambda"
+    }
+
+    VEICULO {
+        string id PK
+        string placa UK
+        string modelo
+        string marca
+        int ano
+    }
+
+    SERVICO {
+        string id PK
+        string nome "catalogo - sem FK direta em ItemOrdemServico"
+        float preco
+    }
+
+    PECA {
+        string id PK
+        string nome "catalogo - sem FK direta em ItemOrdemServico"
+        float preco
+        int estoque
+    }
+
+    ORDEM_SERVICO {
+        string id PK
+        string clienteId FK
+        string veiculoId FK
+        enum status "RECEBIDA a ENTREGUE"
+        float valorTotal
+        datetime criadaEm
+        datetime finalizadaEm "nullable"
+    }
+
+    ITEM_ORDEM_SERVICO {
+        string id PK
+        string ordemServicoId FK
+        enum tipo "SERVICO ou PECA"
+        string descricao "copia do catalogo no momento do lancamento"
+        float preco
+        int quantidade
+    }
+
+    ORDEM_SERVICO_STATUS_HISTORICO {
+        string id PK
+        string ordemServicoId FK
+        enum status
+        datetime alteradoEm "1 linha por transicao"
+    }

@@ -1,0 +1,47 @@
+sequenceDiagram
+    actor Atendente
+    actor Mecanico
+    participant App as API NestJS (Repo 4)
+    participant Guard as JwtAuthGuard + RolesGuard
+    participant RDS as RDS PostgreSQL (Repo 1)
+    participant Hist as ordens_servico_status_historico
+    participant Metrics as /metrics (Prometheus)
+
+    Atendente->>App: POST /os { clienteId, veiculoId }<br/>Authorization: Bearer {token ATENDENTE}
+    App->>Guard: valida JWT + role ATENDENTE
+    Guard-->>App: autorizado
+    App->>RDS: INSERT ordem_servico (status=RECEBIDA)
+    App->>Hist: INSERT historico (status=RECEBIDA)
+    App->>Metrics: oficina_ordens_servico_created_total++
+    App-->>Atendente: 201 { id, status: RECEBIDA }
+
+    Mecanico->>App: POST /os/:id/diagnostico<br/>Authorization: Bearer {token MECANICO}
+    App->>Guard: valida JWT + role MECANICO
+    App->>RDS: UPDATE status=EM_DIAGNOSTICO
+    App->>Hist: INSERT historico (status=EM_DIAGNOSTICO)
+    Note over Hist,Metrics: duracao do status anterior (RECEBIDA)<br/>observada no histograma
+    App->>Metrics: oficina_ordem_servico_status_duration_seconds.observe()
+    App-->>Mecanico: 200 { status: EM_DIAGNOSTICO }
+
+    Atendente->>App: POST /os/:id/orcamento
+    App->>RDS: UPDATE status=AGUARDANDO_APROVACAO
+    App->>Hist: INSERT historico
+
+    Note over Atendente,App: cliente aprova via webhook (fora deste diagrama)
+    App->>RDS: UPDATE status=APROVADA
+    App->>Hist: INSERT historico
+
+    Mecanico->>App: POST /os/:id/executar
+    App->>RDS: UPDATE status=EM_EXECUCAO
+    App->>Hist: INSERT historico
+
+    Mecanico->>App: POST /os/:id/finalizar
+    App->>RDS: UPDATE status=FINALIZADA, finalizadaEm=now()
+    App->>Hist: INSERT historico (status=FINALIZADA)
+    App->>Metrics: observa duracao de EM_EXECUCAO
+    App-->>Mecanico: 200 { status: FINALIZADA, tempoExecucaoMs }
+
+    Atendente->>App: POST /os/:id/entregar
+    App->>RDS: UPDATE status=ENTREGUE
+    App->>Hist: INSERT historico (status=ENTREGUE)
+    App-->>Atendente: 200 { status: ENTREGUE }

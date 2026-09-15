@@ -16,6 +16,7 @@ do Tech Challenge:
 ## Sumário
 
 - [Propósito](#propósito)
+- [Arquitetura](#arquitetura)
 - [Integração com os outros repositórios](#integração-com-os-outros-repositórios)
 - [Observabilidade](#observabilidade)
 - [Execução local](#execução-local)
@@ -31,6 +32,42 @@ Gerenciar Ordens de Serviço de uma oficina mecânica (Clean Architecture/DDD),
 agora rodando em Kubernetes gerenciado (EKS), com autenticação de clientes
 via JWT emitido por uma Lambda separada, logs estruturados, métricas
 Prometheus e dashboards prontos para importação.
+
+## Arquitetura
+
+```mermaid
+flowchart TB
+    Cliente[Cliente / Atendente / Mecânico]
+
+    subgraph Repo2["oficina-lambda-auth (Repo 2)"]
+        APIGW[API Gateway]
+        Lambda[Lambda Auth CPF]
+    end
+
+    subgraph Repo3["oficina-k8s-infrastructure (Repo 3)"]
+        EKS[Cluster EKS]
+    end
+
+    subgraph Repo4["oficina-app (este)"]
+        App[NestJS API]
+        Health["/health"]
+        Metrics["/metrics"]
+    end
+
+    subgraph Repo1["oficina-db-infrastructure (Repo 1)"]
+        RDS[(RDS PostgreSQL)]
+    end
+
+    Cliente -->|"POST /auth (CPF)"| APIGW --> Lambda
+    Lambda -->|valida CPF| RDS
+    Lambda -->|JWT assinado| Cliente
+
+    Cliente -->|"Bearer JWT"| App
+    App -- roda dentro de --> EKS
+    App --> Health
+    App --> Metrics
+    App -->|Prisma| RDS
+```
 
 ## Integração com os outros repositórios
 

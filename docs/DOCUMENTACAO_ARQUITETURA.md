@@ -19,6 +19,49 @@
 - [11. Execução do Projeto](#11-execução-do-projeto)
 - [12. Considerações Finais](#12-considerações-finais)
 
+## Entregáveis Fase 3
+
+Arquitetura em nuvem (AWS) segregada em 4 repositórios independentes, cada
+um com Terraform próprio e pipeline de CI/CD autônoma.
+
+### Repositórios
+
+| # | Repositório | Responsabilidade |
+|---|---|---|
+| 1 | [oficina-db-infrastructure](https://github.com/marcosrenansilvafaria-afk/oficina-db-infrastructure) | RDS PostgreSQL, VPC, Security Groups, SSM Parameter Store |
+| 2 | [oficina-lambda-auth](https://github.com/marcosrenansilvafaria-afk/oficina-lambda-auth) | Lambda de autenticação por CPF + API Gateway + Secrets Manager |
+| 3 | [oficina-k8s-infrastructure](https://github.com/marcosrenansilvafaria-afk/oficina-k8s-infrastructure) | Cluster EKS, Metrics Server, EKS Access Entries |
+| 4 | **oficina-app** (este) | Aplicação NestJS, manifestos K8s, HPA, observabilidade |
+
+### Diagramas de arquitetura (Mermaid)
+
+- [Diagrama de componentes](diagram/fase3-componentes.mmd) — visão geral AWS: API Gateway, Lambda, EKS, RDS, Secrets Manager, observabilidade
+- [Sequência — autenticação por CPF](diagram/fase3-sequencia-auth.mmd)
+- [Sequência — criação/gestão de OS com JWT](diagram/fase3-sequencia-os.mmd)
+- [ERD do PostgreSQL](diagram/fase3-erd.mmd) (ver também [modelo-dados.md](modelo-dados.md))
+
+### RFCs
+
+- [RFC-001 — Escolha da nuvem (AWS) e uso do EKS](rfc/RFC-001-escolha-aws-eks.md)
+- [RFC-002 — Escolha do banco de dados gerenciado (PostgreSQL/RDS)](rfc/RFC-002-postgresql-rds.md)
+- [RFC-003 — Autenticação serverless desacoplada via CPF e JWT](rfc/RFC-003-auth-serverless-cpf-jwt.md)
+
+### ADRs (novos na Fase 3)
+
+- [ADR-012 — Segregação em 4 repositórios com CI/CD autônomo e remote state](adr/ADR-012-segregacao-4-repositorios-cicd.md)
+- [ADR-013 — Segurança e roteamento (API Gateway + Bearer JWT + RBAC)](adr/ADR-013-seguranca-apigateway-jwt-rbac.md)
+- [ADR-014 — HPA com Metrics Server para resiliência na nuvem](adr/ADR-014-hpa-metrics-server.md)
+- [ADR-015 — Observabilidade (logs JSON, métricas Prometheus, dashboards)](adr/ADR-015-observabilidade-json-logs-metricas.md)
+
+### Modelo de dados
+
+- [Justificativa do modelo de dados e ERD detalhado](modelo-dados.md)
+
+### Observabilidade
+
+- Dashboards prontos para importação em Grafana: [`observability/dashboards/`](../observability/dashboards/)
+- Endpoints: `GET /health` (healthcheck), `GET /metrics` (Prometheus)
+
 ## Entregáveis Fase 2
 - Vídeo Fase 2 : [docs/video/apresentacao-fase-2.txt](../docs/video/apresentacao-fase-2.txt)
 

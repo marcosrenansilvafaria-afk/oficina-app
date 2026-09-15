@@ -1,0 +1,32 @@
+sequenceDiagram
+    actor Cliente
+    participant APIGW as API Gateway (Repo 2)
+    participant Lambda as Lambda oficina-auth (Repo 2)
+    participant RDS as RDS PostgreSQL (Repo 1)
+    participant App as API NestJS no EKS (Repo 4)
+
+    Cliente->>APIGW: POST /auth { "cpf": "111.444.777-35" }
+    APIGW->>Lambda: invoke (AWS_PROXY)
+    Lambda->>Lambda: valida digitos verificadores do CPF (mod-11)
+
+    alt CPF invalido (formato)
+        Lambda-->>Cliente: 400 { message: "CPF invalido" }
+    else CPF valido
+        Lambda->>RDS: SELECT id, nome FROM clientes WHERE documento = $1
+        alt cliente nao encontrado
+            RDS-->>Lambda: 0 linhas
+            Lambda-->>Cliente: 404 { message: "Cliente nao encontrado" }
+        else cliente encontrado
+            RDS-->>Lambda: { id, nome }
+            Lambda->>Lambda: assina JWT HS256 { sub: id, role: "CLIENTE" }, exp 1h
+            Lambda-->>Cliente: 200 { token, cliente: { id, nome } }
+        end
+    end
+
+    Note over Cliente,App: Token reutilizado nas chamadas seguintes
+    Cliente->>App: GET /os/:id/status<br/>Authorization: Bearer {token}
+    App->>App: JwtStrategy valida assinatura (mesmo JWT_SECRET do Repo 2)
+    App->>App: RolesGuard confere role CLIENTE
+    App->>RDS: SELECT ordem_servico WHERE id = :id
+    RDS-->>App: status atual
+    App-->>Cliente: 200 { id, status, statusLabel }
