@@ -32,7 +32,7 @@ flowchart TB
     Lambda -. "credenciais espelhadas (deploy-time)" .-> SM
     Client -- "2. Bearer JWT" --> App
     App -- "Prisma / SQL" --> RDS
-    App -- "credenciais (deploy-time)" .-> SSM
+    App -. "credenciais (deploy-time)" .-> SSM
     Metrics -- "metrics.k8s.io" --> App
     EKS -.-> Nodes
 
