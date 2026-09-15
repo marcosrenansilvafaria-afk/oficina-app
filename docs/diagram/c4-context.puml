@@ -1,0 +1,30 @@
+@startuml C1_Oficina_Context
+!ROUNDED_STYLE=1
+!NEW_C4_STYLE=1
+!theme C4_superhero from https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/themes
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+LAYOUT_LEFT_RIGHT()
+
+title C1 - Contexto do Sistema Oficina (MVP)
+
+Person(cliente, "Cliente", "Solicita servicos e aprova orcamento")
+Person(atendente, "Atendente", "Cria e gerencia ordem de servico")
+Person(mecanico, "Mecanico", "Executa servicos da ordem")
+
+System(sistema, "Sistema Oficina (Backend API)", "Gerencia OS, clientes, veiculos, pecas e servicos")
+System_Ext(secretEnv, "Ambiente (.env)", "JWT_SECRET para assinatura dos tokens")
+
+System_Ext(notificacao, "Servico de Notificacao", "Integracao futura para envio de mensagens")
+System_Ext(pagamento, "Gateway de Pagamento", "Integracao futura para pagamentos")
+
+Rel(cliente, sistema, "Consulta status e aprova orcamento", "HTTP/REST (JWT quando protegido)")
+Rel(atendente, sistema, "Cria e gerencia OS", "HTTP/REST + Login JWT")
+Rel(mecanico, sistema, "Atualiza execucao", "HTTP/REST + Login JWT")
+Rel(sistema, secretEnv, "Le JWT_SECRET", "dotenv")
+
+Rel(sistema, notificacao, "Envia notificacoes", "Async (futuro)")
+Rel(sistema, pagamento, "Processa pagamentos", "HTTP (futuro)")
+
+SHOW_LEGEND()
+@enduml

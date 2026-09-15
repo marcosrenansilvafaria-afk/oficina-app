@@ -1,0 +1,36 @@
+@startuml Auth_JWT_Flow
+!theme C4_united from https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/themes
+
+title Fluxo de Autenticacao JWT (MVP)
+
+Person(usuario, "Usuario da API")
+
+Container(api, "API Oficina", "NestJS", "Backend com JWT e RBAC")
+Component(authController, "AuthController", "HTTP", "Endpoint POST /auth/login")
+Component(authService, "AuthService", "Application Service", "Valida credencial mock e emite JWT")
+Component(jwtStrategy, "JwtStrategy", "Passport JWT", "Valida assinatura e expiracao do token")
+Component(jwtGuard, "JwtAuthGuard", "Guard", "Exige Authorization Bearer")
+Component(rolesGuard, "RolesGuard", "Guard", "Valida role por endpoint")
+Component(controladores, "Controllers de Dominio", "HTTP", "Clientes, Veiculos, Servicos, Pecas e OS")
+
+System_Ext(secretEnv, "Ambiente (.env)", "JWT_SECRET e parametros de execucao")
+
+Rel(usuario, authController, "1) Envia email/senha", "POST /auth/login")
+Rel(authController, authService, "2) Solicita autenticacao", "Metodo")
+Rel(authService, secretEnv, "3) Usa JWT_SECRET para assinar token", "dotenv")
+Rel(authService, authController, "4) Retorna access_token (exp 1h)", "JWT")
+Rel(authController, usuario, "5) Responde token", "JSON")
+
+Rel(usuario, controladores, "6) Chama endpoint protegido", "Authorization: Bearer <token>")
+Rel(controladores, jwtGuard, "7) Executa guard de autenticacao", "Nest Guard")
+Rel(jwtGuard, jwtStrategy, "8) Valida assinatura/expiracao", "Passport")
+Rel(jwtStrategy, controladores, "9) Injeta user (sub, role)", "request.user")
+Rel(controladores, rolesGuard, "10) Valida permissao de role", "@Roles")
+Rel(rolesGuard, controladores, "11) Libera ou bloqueia", "200/403")
+Rel(controladores, usuario, "12) Retorna resposta de negocio", "JSON")
+
+UpdateRelStyle(authService, secretEnv, $textColor="blue", $lineColor="blue")
+UpdateRelStyle(rolesGuard, controladores, $textColor="darkgreen", $lineColor="darkgreen")
+
+SHOW_LEGEND()
+@enduml

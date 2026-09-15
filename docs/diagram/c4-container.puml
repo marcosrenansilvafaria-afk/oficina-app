@@ -1,0 +1,36 @@
+@startuml C2_Oficina_Container
+
+!ROUNDED_STYLE=1
+!NEW_C4_STYLE=1
+!theme C4_superhero from https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/themes
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+LAYOUT_LEFT_RIGHT()
+
+title C2 - Containers do Sistema Oficina (MVP)
+
+Person(cliente, "Cliente")
+Person(atendente, "Atendente")
+Person(mecanico, "Mecanico")
+
+System_Boundary(s1, "Sistema Oficina") {
+  Container(api, "API Backend", "NestJS (Node.js)", "Exposicao REST, validacoes e orquestracao dos casos de uso")
+  Container(repoMemory, "Repositorio In-Memory", "In-memory", "Persistencia temporaria para MVP e fase inicial de testes")
+}
+
+ContainerDb_Ext(dbFuturo, "Banco de Dados", "PostgreSQL/NoSQL (planejado)", "Substituira os repositorios in-memory apos a fase de testes")
+System_Ext(secretEnv, "Ambiente (.env)", "JWT_SECRET para assinatura/validacao JWT")
+System_Ext(notificacao, "Servico de Notificacao", "Integracao futura")
+System_Ext(pagamento, "Gateway de Pagamento", "Integracao futura")
+
+Rel(cliente, api, "Consulta status e aprova orcamento", "HTTP/REST")
+Rel(atendente, api, "Login e operacao autenticada", "HTTP/REST + JWT")
+Rel(mecanico, api, "Login e operacao autenticada", "HTTP/REST + JWT")
+
+Rel(api, repoMemory, "Le e escreve dados", "Repository pattern")
+Rel(api, secretEnv, "Le JWT_SECRET", "dotenv")
+Rel(api, dbFuturo, "Migracao planejada apos fase de testes", "JDBC/ORM (futuro)")
+Rel(api, notificacao, "Envia notificacoes", "Async (futuro)")
+Rel(api, pagamento, "Processa pagamentos", "HTTP (futuro)")
+
+SHOW_LEGEND()
+@enduml

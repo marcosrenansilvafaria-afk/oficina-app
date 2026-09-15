@@ -1,0 +1,50 @@
+@startuml C3_Oficina_Component
+!ROUNDED_STYLE=1
+!NEW_C4_STYLE=1
+!theme C4_superhero from https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/themes
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+LAYOUT_LEFT_RIGHT()
+
+title C3 - Componentes da API Backend Oficina (MVP)
+
+Person(cliente, "Cliente")
+Person(atendente, "Atendente")
+Person(mecanico, "Mecanico")
+
+System_Ext(notificacao, "Servico de Notificacao", "Integracao futura")
+System_Ext(pagamento, "Gateway de Pagamento", "Integracao futura")
+
+Container_Boundary(api, "API Backend (NestJS)") {
+  Component(httpControllers, "HTTP Controllers", "NestJS Controllers", "Endpoints REST para OS, cliente, veiculo, servico e peca")
+  Component(authController, "AuthController", "NestJS Controller", "Endpoint de login JWT")
+  Component(authService, "AuthService", "Application Service", "Valida credenciais mock e emite access token")
+  Component(jwtStrategy, "JwtStrategy", "Passport JWT", "Valida assinatura e expiracao do token")
+  Component(jwtGuard, "JwtAuthGuard", "Nest Guard", "Exige Authorization Bearer")
+  Component(rolesGuard, "RolesGuard", "Nest Guard", "Valida permissoes por perfil")
+  Component(useCases, "Application Use Cases", "Application Layer", "Orquestra o fluxo de negocio")
+  Component(domainModel, "Domain Model", "DDD Entities/Aggregates", "Regras de negocio e transicoes da ordem de servico")
+  Component(inMemoryRepos, "In-Memory Repositories", "Infrastructure", "Persistencia temporaria para MVP e fase inicial de testes")
+  Component(singletonWiring, "Singletons/Providers", "NestJS Providers", "Compoe dependencias entre controllers, use cases e repositorios")
+}
+
+Rel(cliente, httpControllers, "Consulta status e aprova orcamento", "HTTP/REST")
+Rel(atendente, httpControllers, "Cria e gerencia OS", "HTTP/REST")
+Rel(mecanico, httpControllers, "Atualiza execucao", "HTTP/REST")
+Rel(atendente, authController, "Realiza login", "POST /auth/login")
+Rel(mecanico, authController, "Realiza login", "POST /auth/login")
+
+Rel(authController, authService, "Autentica e gera token", "Metodo")
+Rel(httpControllers, jwtGuard, "Protege endpoints", "Nest Guard")
+Rel(jwtGuard, jwtStrategy, "Valida token", "Passport")
+Rel(httpControllers, rolesGuard, "Aplica RBAC", "@Roles")
+Rel(httpControllers, useCases, "Invoca", "Metodo")
+Rel(useCases, domainModel, "Aplica regras", "Objeto de dominio")
+Rel(useCases, inMemoryRepos, "Le/Escreve", "Repository")
+Rel(singletonWiring, useCases, "Instancia e injeta", "Nest DI")
+Rel(singletonWiring, inMemoryRepos, "Registra implementacoes", "Nest DI")
+
+Rel(useCases, notificacao, "Envia notificacoes", "Async (futuro)")
+Rel(useCases, pagamento, "Processa pagamentos", "HTTP (futuro)")
+
+SHOW_LEGEND()
+@enduml

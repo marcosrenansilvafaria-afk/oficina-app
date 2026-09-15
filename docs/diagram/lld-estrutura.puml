@@ -1,0 +1,49 @@
+@startuml
+skinparam componentStyle rectangle
+skinparam packageStyle frame
+
+title Low Level Design (LLD) - Estrutura de Pastas
+
+package "src" {
+    
+    package "domain" #D4E157 {
+        package "entities" {
+            [Business Entities]
+        }
+    }
+
+    package "application" #FFF59D {
+        package "use-cases" {
+            [Application Services]
+        }
+    }
+
+    package "interfaces" #81D4FA {
+        package "http" {
+            [Controllers / Routes]
+        }
+    }
+
+    package "infrastructure" #EF9A9A {
+        [in-memory-repositories.ts]
+        [External APIs]
+    }
+
+}
+
+' Relacionamentos de Dependência
+"interfaces" ..> "application" : calls
+"infrastructure" ..> "domain" : implements
+"application" ..> "domain" : uses
+
+note right of "domain"
+  Enterprise Business Rules
+  (Independente de frameworks)
+end note
+
+note right of "infrastructure"
+  Implementações técnicas
+  (DB, Cache, Memory)
+end note
+
+@enduml

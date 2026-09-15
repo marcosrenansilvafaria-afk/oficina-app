@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: oficina_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-oficina}
+      POSTGRES_PASSWORD: ${DB_PASS:-oficina123}
+      POSTGRES_DB: ${DB_NAME:-oficina_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-oficina} -d ${DB_NAME:-oficina_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: oficina_api
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-oficina}:${DB_PASS:-oficina123}@postgres:5432/${DB_NAME:-oficina_db}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
+      PORT: ${PORT:-3000}
+      SEED_DATA: ${SEED_DATA:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # migrations are applied automatically by docker-entrypoint.sh before the API starts
+
+volumes:
+  postgres_data:
