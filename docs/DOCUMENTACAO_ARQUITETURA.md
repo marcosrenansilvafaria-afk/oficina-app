@@ -19,6 +19,40 @@
 - [11. Execução do Projeto](#11-execução-do-projeto)
 - [12. Considerações Finais](#12-considerações-finais)
 
+## Entregáveis Fase 4 — Sprint 1
+
+Infraestrutura de mensageria e contratos do Saga Pattern que vai conectar os
+3 microsserviços da decomposição do monolito (OS Service, Billing Service,
+Execution Service — ainda não criados). Esta sprint provisiona apenas o
+broker e define os contratos; o código dos serviços fica para as próximas
+sprints.
+
+### Repositório novo
+
+| # | Repositório | Responsabilidade |
+|---|---|---|
+| 5 | [oficina-messaging-infra](https://github.com/marcosrenansilvafaria-afk/oficina-messaging-infra) | Broker SNS FIFO + SQS FIFO/DLQ do Saga, IAM policies por serviço, contratos de evento |
+
+### Saga Pattern
+
+- [SAGA_PATTERN_SPEC.md](SAGA_PATTERN_SPEC.md) — especificação completa:
+  escolha do Saga coreografado, fluxo feliz e cenários de compensação
+  (falha de pagamento, falha de execução), tabela de eventos
+  publicador/consumidor.
+- [Diagrama — fluxo feliz](diagram/fase4-saga-happy-path.mmd)
+- [Diagrama — fluxos de compensação](diagram/fase4-saga-compensacao.mmd)
+
+### RFCs
+
+- [RFC-004 — Saga Pattern coreografado e mensageria serverless (SNS/SQS)](rfc/RFC-004-saga-pattern-mensageria.md)
+
+### Contratos de evento
+
+- [`oficina-messaging-infra/contracts/`](https://github.com/marcosrenansilvafaria-afk/oficina-messaging-infra/tree/main/contracts) —
+  interfaces TypeScript + JSON Schema dos 7 eventos do Saga (`OSCriadaEvent`,
+  `OrcamentoGeradoEvent`, `PagamentoAprovadoEvent`, `PagamentoRecusadoEvent`,
+  `ExecucaoIniciadaEvent`, `ExecucaoConcluidaEvent`, `CompensarOSEvent`).
+
 ## Entregáveis Fase 3
 
 Arquitetura em nuvem (AWS) segregada em 4 repositórios independentes, cada

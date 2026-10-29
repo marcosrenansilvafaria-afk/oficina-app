@@ -1,0 +1,28 @@
+sequenceDiagram
+    participant OS as OS Service
+    participant Topic as SNS FIFO<br/>oficina-saga-events.fifo
+    participant Billing as Billing Service
+    participant MP as Mercado Pago
+    participant Execution as Execution Service
+
+    rect rgb(255, 235, 235)
+    Note over Billing,MP: Cenario 1 - falha de pagamento
+    Billing->>MP: cria cobranca
+    MP-->>Billing: webhook: pagamento recusado
+    Billing->>Topic: PagamentoRecusadoEvent
+    Billing->>Topic: CompensarOSEvent (origemFalha=PAGAMENTO)
+    Topic->>OS: CompensarOSEvent
+    Note over OS: reverte status (AGUARDANDO_APROVACAO)
+    Note over Execution: nunca recebe PagamentoAprovadoEvent -<br/>nao inicia o reparo
+    end
+
+    rect rgb(255, 245, 225)
+    Note over Execution: Cenario 2 - falha de execucao (pagamento ja aprovado)
+    Topic->>Execution: PagamentoAprovadoEvent
+    Execution->>Execution: inicia reparo, falha
+    Execution->>Topic: CompensarOSEvent (origemFalha=EXECUCAO)
+    Topic->>OS: CompensarOSEvent
+    Note over OS: reverte status da OS
+    Topic->>Billing: CompensarOSEvent
+    Billing->>MP: solicita reembolso
+    end

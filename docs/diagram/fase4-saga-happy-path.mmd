@@ -1,0 +1,24 @@
+sequenceDiagram
+    participant OS as OS Service
+    participant Topic as SNS FIFO<br/>oficina-saga-events.fifo
+    participant Billing as Billing Service
+    participant MP as Mercado Pago
+    participant Execution as Execution Service
+
+    OS->>Topic: OSCriadaEvent
+    Note over OS: diagnostico + calculo do orcamento
+    OS->>Topic: OrcamentoGeradoEvent
+    Topic->>Billing: OrcamentoGeradoEvent (filtro: eventType)
+    Billing->>MP: cria cobranca
+    MP-->>Billing: webhook: pagamento aprovado
+    Billing->>Topic: PagamentoAprovadoEvent
+    Topic->>OS: PagamentoAprovadoEvent
+    Note over OS: status -> APROVADA
+    Topic->>Execution: PagamentoAprovadoEvent
+    Execution->>Topic: ExecucaoIniciadaEvent
+    Topic->>OS: ExecucaoIniciadaEvent
+    Note over OS: status -> EM_EXECUCAO
+    Note over Execution: reparo concluido
+    Execution->>Topic: ExecucaoConcluidaEvent
+    Topic->>OS: ExecucaoConcluidaEvent
+    Note over OS: status -> FINALIZADA
