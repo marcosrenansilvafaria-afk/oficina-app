@@ -1,6 +1,7 @@
 {
-  "title": "Oficina - Taxa de Erros e Falhas em Integracoes",
-  "uid": "oficina-taxa-erros",
+  "title": "Oficina - Taxa de Erros em Integracoes do Saga (3 microsservicos)",
+  "uid": "oficina-taxa-erros-saga",
+  "description": "Pos-decomposicao (Fase 4): soma por job/service as metricas oficina_integration_errors_total expostas por oficina-os-service, oficina-billing-service e oficina-execution-service - cada um roda com a mesma label 'integracao=saga-sqs-consumer' no consumidor do Saga. Substitui oficina-taxa-erros (monolito), mantido no historico.",
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
@@ -9,13 +10,13 @@
     {
       "id": 1,
       "type": "timeseries",
-      "title": "Erros de integracao por origem (5xx)",
+      "title": "Erros de integracao por origem e por servico (5xx)",
       "gridPos": { "h": 9, "w": 24, "x": 0, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "targets": [
         {
-          "expr": "sum by (integracao) (rate(oficina_integration_errors_total[5m]))",
-          "legendFormat": "{{integracao}}",
+          "expr": "sum by (integracao, job) (rate(oficina_integration_errors_total[5m]))",
+          "legendFormat": "{{job}} - {{integracao}}",
           "refId": "A"
         }
       ]
@@ -23,13 +24,28 @@
     {
       "id": 2,
       "type": "stat",
-      "title": "Taxa de erro HTTP (5xx / total)",
+      "title": "Taxa de erro HTTP (5xx / total) - todos os servicos",
       "gridPos": { "h": 6, "w": 8, "x": 0, "y": 9 },
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
       "targets": [
         {
           "expr": "sum(rate(http_request_duration_seconds_count{status_code=~\"5..\"}[5m])) / sum(rate(http_request_duration_seconds_count[5m]))",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Taxa de erro HTTP (5xx / total) - por servico",
+      "gridPos": { "h": 6, "w": 16, "x": 8, "y": 9 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "sum by (job) (rate(http_request_duration_seconds_count{status_code=~\"5..\"}[5m])) / sum by (job) (rate(http_request_duration_seconds_count[5m]))",
+          "legendFormat": "{{job}}",
           "refId": "A"
         }
       ]
