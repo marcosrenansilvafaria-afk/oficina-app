@@ -1,6 +1,7 @@
 {
   "title": "Oficina - Tempo Medio de Execucao por Status",
   "uid": "oficina-tempo-medio-status",
+  "description": "Pos-decomposicao (Fase 4): oficina_ordem_servico_status_duration_seconds continua exposta pelo oficina-os-service (fonte de verdade do status da OS via Saga). Painel adicional (3) traz oficina_execution_duracao_segundos, exposta pelo oficina-execution-service - duracao do reparo em si, complementar (nao substitui) a duracao por status da OS.",
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
@@ -32,6 +33,21 @@
           "expr": "oficina_ordem_servico_status_duration_seconds_bucket",
           "format": "table",
           "instant": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "bargauge",
+      "title": "Tempo medio (segundos) do reparo em si (Execution Service) - inicio a conclusao",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 20 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "sum(rate(oficina_execution_duracao_segundos_sum[$__range])) / sum(rate(oficina_execution_duracao_segundos_count[$__range]))",
+          "legendFormat": "duracao media do reparo",
           "refId": "A"
         }
       ]

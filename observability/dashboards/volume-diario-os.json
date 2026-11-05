@@ -1,6 +1,7 @@
 {
   "title": "Oficina - Volume Diario de Ordens de Servico",
   "uid": "oficina-volume-diario-os",
+  "description": "Pos-decomposicao (Fase 4): oficina_ordens_servico_created_total agora e exposta pelo oficina-os-service standalone (nao mais pelo monolito oficina-app) - a query/metrica em si nao mudou, so a origem do dado.",
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,

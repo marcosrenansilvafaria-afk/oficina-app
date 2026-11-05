@@ -113,7 +113,7 @@ sequenceDiagram
     Billing->>Topic: PagamentoRecusadoEvent
     Billing->>Topic: CompensarOSEvent (origemFalha=PAGAMENTO)
     Topic->>OS: CompensarOSEvent
-    Note over OS: reverte status (AGUARDANDO_APROVACAO)
+    Note over OS: reverte status (EM_DIAGNOSTICO)
     Note over Execution: nunca recebe PagamentoAprovadoEvent -<br/>nao inicia o reparo
     end
 
@@ -134,9 +134,13 @@ sequenceDiagram
 O Mercado Pago recusa ou expira a cobrança. **Billing Service** publica
 `PagamentoRecusadoEvent` (para fins de auditoria/histórico) **e**
 `CompensarOSEvent` (`origemFalha: "PAGAMENTO"`). **OS Service** consome
-`CompensarOSEvent` e reverte a OS para um estado anterior a aprovação (ex.
-volta para `AGUARDANDO_APROVACAO`, permitindo um novo ciclo de
-orçamento/cobrança). O **Execution Service** nunca chega a ser acionado,
+`CompensarOSEvent` e reverte a OS para `EM_DIAGNOSTICO` — não para
+`AGUARDANDO_APROVACAO` como um desenho inicial deste documento sugeria.
+Validado via `recusarOrcamento()` em
+`oficina-os-service/src/domain/entities/ordem-servico.ts`: a OS reabre
+para um novo ciclo de diagnóstico/orçamento (não existe meio-termo —
+ou o orçamento atual é aprovado, ou volta para ser reavaliado do zero).
+O **Execution Service** nunca chega a ser acionado,
 porque só reage a `PagamentoAprovadoEvent` — que neste cenário nunca é
 publicado.
 
@@ -184,11 +188,45 @@ interface SagaEventEnvelope<TPayload> {
 | `ExecucaoConcluidaEvent` | Execution Service | OS Service |
 | `CompensarOSEvent` | Billing Service ou Execution Service | OS Service, Billing Service, Execution Service (conforme `origemFalha`) |
 
-## Fora do escopo desta sprint
+## Evidências de validação E2E (Sprint 5)
 
-Código dos 3 microsserviços, integração real com o SDK do Mercado Pago,
-split do `prisma/schema.prisma` atual, testes BDD/unitários dos novos
-serviços, SonarQube — ficam para as próximas sprints da Fase 4.
+Os 3 microsserviços foram implementados nas Sprints 2-4 e validados
+isoladamente (testes unitários/BDD com `FakeSagaPublisher`/repositórios
+in-memory). A Sprint 5 valida o Saga **coreografado entre os 3 processos
+reais**, publicando/consumindo eventos no SNS/SQS FIFO real (não um
+emulador) — suíte em
+[`test/saga-e2e/`](../test/saga-e2e/README.md) deste repositório.
+
+| Cenário | Arquivo | Valida |
+|---|---|---|
+| Fluxo feliz | `saga-happy-path.e2e-spec.ts` | `OSCriadaEvent` → `OrcamentoGeradoEvent` → `PagamentoAprovadoEvent` → `ExecucaoIniciadaEvent` → `ExecucaoConcluidaEvent`; OS percorre `RECEBIDA → ... → APROVADA → EM_EXECUCAO → FINALIZADA` |
+| Compensação por pagamento recusado | `saga-compensacao-pagamento.e2e-spec.ts` | `PagamentoRecusadoEvent` + `CompensarOSEvent(origemFalha=PAGAMENTO)`; OS reverte para `EM_DIAGNOSTICO` (ver correção acima); Execution nunca é acionado |
+| Compensação por falha na execução | `saga-compensacao-execucao.e2e-spec.ts` | `CompensarOSEvent(origemFalha=EXECUCAO)`; OS e Execução terminam em `CANCELADA`; Billing reembolsa o pagamento (`REEMBOLSADO`) |
+
+**Rastreabilidade**: cada passo do script loga
+`correlationId=<ordemServicoId>` junto do evento observado; nos 3
+microsserviços, o publisher (`SnsPublisherService`) e o consumer
+(`SqsConsumerService`) do Saga agora logam
+`{ correlationId, eventType }` em JSON (via `nestjs-pino`) a cada
+publish/processamento — antes só havia log em caso de erro, sem o
+`correlationId` do Saga. Isso permite reconstruir o trace completo de uma
+saga específica filtrando os logs dos 3 serviços por `correlationId`.
+
+### Resultado da execução local
+
+<!-- SAGA_E2E_RESULTADO -->
+_Preenchido após a execução real da suíte (depende do Docker Desktop e de
+`aws login` ativo). Ver [`test/saga-e2e/README.md`](../test/saga-e2e/README.md)
+para como rodar._
+
+## Fora do escopo (histórico da Sprint 1)
+
+No desenho original desta spec (Sprint 1, antes do código dos serviços
+existir): código dos 3 microsserviços, integração real com o SDK do
+Mercado Pago, split do `prisma/schema.prisma` atual, testes
+BDD/unitários dos novos serviços, SonarQube. Tudo isso foi implementado
+nas Sprints 2-4; a validação E2E ponta a ponta ficou para a Sprint 5
+(seção acima).
 
 ## Referências
 
