@@ -27,3 +27,6 @@ Arquivos atuais:
 - ADR-013-seguranca-apigateway-jwt-rbac.md
 - ADR-014-hpa-metrics-server.md
 - ADR-015-observabilidade-json-logs-metricas.md
+- ADR-016-database-per-service-hibrido.md
+- ADR-017-integracao-mercadopago-webhooks.md
+- ADR-018-estrategia-testes-bdd-cobertura.md

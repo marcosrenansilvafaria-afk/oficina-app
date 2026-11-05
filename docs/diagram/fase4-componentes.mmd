@@ -1,0 +1,66 @@
+flowchart TB
+    Client(["Cliente / Postman / Navegador"])
+    Grafana["Grafana (externo)\nimporta os 3 dashboards JSON"]
+
+    subgraph AWS["AWS (us-east-1)"]
+        subgraph Saga["oficina-messaging-infra - Saga Pattern"]
+            Topic["SNS FIFO\noficina-saga-events.fifo"]
+            QOS[("SQS FIFO\noficina-saga-os-service")]
+            QBill[("SQS FIFO\noficina-saga-billing-service")]
+            QExec[("SQS FIFO\noficina-saga-execution-service")]
+            DLQ1[("DLQ x3")]
+        end
+
+        subgraph K8sInfra["oficina-k8s-infrastructure - EKS (namespace oficina)"]
+            OS["oficina-os-service\nPods NestJS (HPA)"]
+            Billing["oficina-billing-service\nPods NestJS (HPA)"]
+            Exec["oficina-execution-service\nPods NestJS (HPA)"]
+        end
+
+        subgraph DbInfra["oficina-db-infrastructure - RDS compartilhada"]
+            RDS[("RDS PostgreSQL 16\ndb: os_service | execution_service")]
+        end
+
+        subgraph DynamoInfra["oficina-billing-service - DynamoDB"]
+            DynOrc[("billing-orcamentos")]
+            DynPag[("billing-pagamentos")]
+            DynLog[("billing-webhook-logs")]
+        end
+
+        MP["Mercado Pago\n(API + Webhook)"]
+    end
+
+    Client -- "POST /os, /orcamento ..." --> OS
+    Client -- "GET /pagamentos/:id" --> Billing
+    Client -- "POST /execucoes/:id/iniciar" --> Exec
+
+    OS -- "Prisma/SQL (db os_service)" --> RDS
+    Exec -- "Prisma/SQL (db execution_service)" --> RDS
+    Billing -- "AWS SDK" --> DynOrc
+    Billing -- "AWS SDK" --> DynPag
+    Billing -- "AWS SDK" --> DynLog
+    Billing -- "cria cobranca / consulta pagamento" --> MP
+    MP -- "webhook POST /webhooks/mercadopago" --> Billing
+
+    OS -- "publica OSCriadaEvent, OrcamentoGeradoEvent" --> Topic
+    Billing -- "publica PagamentoAprovadoEvent, PagamentoRecusadoEvent, CompensarOSEvent" --> Topic
+    Exec -- "publica ExecucaoIniciadaEvent, ExecucaoConcluidaEvent, CompensarOSEvent" --> Topic
+
+    Topic -- "filtro eventType" --> QOS
+    Topic -- "filtro eventType" --> QBill
+    Topic -- "filtro eventType" --> QExec
+    QOS -.-> OS
+    QBill -.-> Billing
+    QExec -.-> Exec
+    QOS -. "falha de entrega" .-> DLQ1
+    QBill -. "falha de entrega" .-> DLQ1
+    QExec -. "falha de entrega" .-> DLQ1
+
+    OS -. "GET /metrics" .-> Grafana
+    Billing -. "GET /metrics" .-> Grafana
+    Exec -. "GET /metrics" .-> Grafana
+
+    style Saga fill:#f4f0ff,stroke:#7c5cff
+    style K8sInfra fill:#eafaf1,stroke:#2ecc71
+    style DbInfra fill:#fff4e5,stroke:#e67e22
+    style DynamoInfra fill:#e5f4ff,stroke:#2e86de

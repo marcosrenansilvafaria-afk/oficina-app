@@ -84,10 +84,23 @@ pagamento recusado depois do orcamento gerado).
   central mostrando "em que passo a saga X esta agora") - mitigado por
   `correlationId = ordemServicoId` em todo evento, permitindo filtrar logs
   por OS especifica.
-- Pendencia conhecida: os 3 repositorios de servico (`oficina-os-service`,
-  `oficina-billing-service`, `oficina-execution-service`) ainda nao
-  existem - as IAM policies criadas nesta sprint ficam sem nenhuma role
-  anexada até a proxima sprint, quando os repositorios forem criados e
-  passarem a consumir os contratos de `oficina-messaging-infra/contracts/`.
+- Pendencia conhecida (resolvida na Sprint 2-4): os 3 repositorios de
+  servico (`oficina-os-service`, `oficina-billing-service`,
+  `oficina-execution-service`) ainda nao existiam nesta sprint - as IAM
+  policies criadas aqui ficaram sem nenhuma role anexada até serem
+  criados, nas sprints seguintes, e passarem a consumir os contratos de
+  `oficina-messaging-infra/contracts/`.
+
+## Validacao (Sprint 5)
+
+A decisao desta RFC foi validada de ponta a ponta contra a infraestrutura
+SNS/SQS real (nao mockada), com os 3 microsservicos rodando como processos
+independentes (`docker-compose.saga-e2e.yml` em `oficina-app`). Os 3
+cenarios descritos em [SAGA_PATTERN_SPEC.md](../SAGA_PATTERN_SPEC.md#evidências-de-validação-e2e-sprint-5)
+passaram: fluxo feliz completo, compensacao por pagamento recusado e
+compensacao por falha de execucao - confirmando que o `correlationId`
+(`= ordemServicoId`) se propaga corretamente por todo o ciclo de vida da
+Saga e que o `CompensarOSEvent` generico (decisao 6 acima) funciona para
+os 2 cenarios de falha reais do dominio.
 
 Relacionado ao PR #fase4-rfc-004

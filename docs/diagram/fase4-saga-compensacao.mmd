@@ -12,7 +12,7 @@ sequenceDiagram
     Billing->>Topic: PagamentoRecusadoEvent
     Billing->>Topic: CompensarOSEvent (origemFalha=PAGAMENTO)
     Topic->>OS: CompensarOSEvent
-    Note over OS: reverte status (AGUARDANDO_APROVACAO)
+    Note over OS: reverte status (EM_DIAGNOSTICO)
     Note over Execution: nunca recebe PagamentoAprovadoEvent -<br/>nao inicia o reparo
     end
 
