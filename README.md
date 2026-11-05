@@ -1,17 +1,22 @@
 # oficina-app
 
-Aplicação principal (NestJS, Clean Architecture/DDD) do projeto **oficina**,
-adaptada para rodar no cluster **EKS** (Repositório 3), consumindo o **RDS
-PostgreSQL** (Repositório 1) e validando tokens **JWT** emitidos pela Lambda
-de autenticação por CPF (Repositório 2). Este é o **Repositório 4** da Fase 3
-do Tech Challenge:
+Aplicação principal (NestJS, Clean Architecture/DDD) do projeto **oficina**.
+Hub de documentação arquitetural, dashboards de observabilidade e da suíte
+E2E do Saga Pattern que valida a coreografia entre os 3 microsserviços da
+Fase 4. Historicamente (Fase 3) também rodava no cluster **EKS**
+(Repositório 3) consumindo o **RDS PostgreSQL** (Repositório 1) — ver
+seção [Deploy no EKS](#deploy-no-eks).
 
 | # | Repositório | Responsabilidade |
 |---|---|---|
-| 1 | oficina-db-infrastructure | Banco de dados gerenciado (RDS PostgreSQL) |
-| 2 | oficina-lambda-auth | Lambda de autenticação por CPF + API Gateway |
-| 3 | oficina-k8s-infrastructure | Cluster Kubernetes gerenciado (EKS) |
-| 4 | **oficina-app** (este) | Aplicação NestJS + observabilidade |
+| 1 | [oficina-db-infrastructure](https://github.com/marcosrenansilvafaria-afk/oficina-db-infrastructure) | RDS PostgreSQL (compartilhada, 1 database por microsserviço) |
+| 2 | [oficina-lambda-auth](https://github.com/marcosrenansilvafaria-afk/oficina-lambda-auth) | Autenticação por CPF + JWT (Lambda + API Gateway) |
+| 3 | [oficina-k8s-infrastructure](https://github.com/marcosrenansilvafaria-afk/oficina-k8s-infrastructure) | Cluster EKS compartilhado |
+| 4 | **oficina-app** (este) | Hub de documentação, dashboards de observabilidade, Saga E2E |
+| 5 | [oficina-messaging-infra](https://github.com/marcosrenansilvafaria-afk/oficina-messaging-infra) | Broker SNS/SQS FIFO + contratos de evento do Saga |
+| 6 | [oficina-os-service](https://github.com/marcosrenansilvafaria-afk/oficina-os-service) | Microsserviço de Ordem de Serviço |
+| 7 | [oficina-billing-service](https://github.com/marcosrenansilvafaria-afk/oficina-billing-service) | Microsserviço de orçamento/pagamento |
+| 8 | [oficina-execution-service](https://github.com/marcosrenansilvafaria-afk/oficina-execution-service) | Microsserviço de fila de produção/execução |
 
 ## Sumário
 

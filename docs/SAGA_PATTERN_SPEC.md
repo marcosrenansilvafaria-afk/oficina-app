@@ -284,6 +284,11 @@ nas Sprints 2-4; a validação E2E ponta a ponta ficou para a Sprint 5
 ## Referências
 
 - [RFC-004 — Saga Pattern e infraestrutura de mensageria](rfc/RFC-004-saga-pattern-mensageria.md)
+- [ADR-016 — Database-per-service híbrido (SQL + NoSQL)](adr/ADR-016-database-per-service-hibrido.md)
+- [ADR-017 — Integração Mercado Pago via webhook](adr/ADR-017-integracao-mercadopago-webhooks.md)
+- [ADR-018 — Estratégia de testes BDD e cobertura ≥80%](adr/ADR-018-estrategia-testes-bdd-cobertura.md)
 - [`oficina-messaging-infra`](https://github.com/marcosrenansilvafaria-afk/oficina-messaging-infra) — Terraform + contratos
+- [`docs/diagram/fase4-componentes.mmd`](diagram/fase4-componentes.mmd) — visão geral de componentes (cloud, microsserviços, Saga, bancos)
 - [`docs/diagram/fase4-saga-happy-path.mmd`](diagram/fase4-saga-happy-path.mmd)
 - [`docs/diagram/fase4-saga-compensacao.mmd`](diagram/fase4-saga-compensacao.mmd)
+- [Modelo de dados — Fase 4 (database-per-service)](modelo-dados.md#fase-4--database-per-service)

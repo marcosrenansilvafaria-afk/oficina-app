@@ -53,6 +53,65 @@ sprints.
   `OrcamentoGeradoEvent`, `PagamentoAprovadoEvent`, `PagamentoRecusadoEvent`,
   `ExecucaoIniciadaEvent`, `ExecucaoConcluidaEvent`, `CompensarOSEvent`).
 
+## Entregáveis Fase 4 — Sprint 2
+
+Primeiro microsserviço extraído do monolito.
+
+| # | Repositório | Responsabilidade |
+|---|---|---|
+| 6 | [oficina-os-service](https://github.com/marcosrenansilvafaria-afk/oficina-os-service) | Ordem de Serviço (PostgreSQL próprio, BDD, cobertura ≥80%) |
+
+## Entregáveis Fase 4 — Sprint 3
+
+Segundo microsserviço, com o primeiro banco NoSQL do projeto e a primeira
+integração de pagamento real.
+
+| # | Repositório | Responsabilidade |
+|---|---|---|
+| 7 | [oficina-billing-service](https://github.com/marcosrenansilvafaria-afk/oficina-billing-service) | Orçamento/pagamento (DynamoDB, integração Mercado Pago, BDD, cobertura ≥80%) |
+
+- [ADR-017 — Integração Mercado Pago via webhook](adr/ADR-017-integracao-mercadopago-webhooks.md)
+
+## Entregáveis Fase 4 — Sprint 4
+
+Terceiro e último microsserviço da decomposição.
+
+| # | Repositório | Responsabilidade |
+|---|---|---|
+| 8 | [oficina-execution-service](https://github.com/marcosrenansilvafaria-afk/oficina-execution-service) | Fila de produção e execução de reparos (PostgreSQL próprio, BDD, cobertura ≥80%) |
+
+- [ADR-016 — Database-per-service híbrido (SQL + NoSQL)](adr/ADR-016-database-per-service-hibrido.md)
+- [ADR-018 — Estratégia de testes BDD e cobertura ≥80%](adr/ADR-018-estrategia-testes-bdd-cobertura.md)
+
+## Entregáveis Fase 4 — Sprint 5
+
+Validação end-to-end do Saga coreografado contra infraestrutura AWS real
+(não mockada) e consolidação da observabilidade distribuída.
+
+- [`oficina-app/test/saga-e2e/`](https://github.com/marcosrenansilvafaria-afk/oficina-app/tree/main/test/saga-e2e) —
+  suíte com os 3 cenários (fluxo feliz, compensação por pagamento,
+  compensação por execução) rodando os 3 microsserviços reais via
+  `docker-compose.saga-e2e.yml`.
+- `correlationId` (`= ordemServicoId`) propagado em logs JSON
+  (`nestjs-pino`) dos 3 serviços, em publish e consume de eventos do Saga.
+- 3 dashboards de observabilidade atualizados em
+  [`observability/dashboards/`](https://github.com/marcosrenansilvafaria-afk/oficina-app/tree/main/observability/dashboards).
+- [SAGA_PATTERN_SPEC.md — Evidências de validação E2E](SAGA_PATTERN_SPEC.md#evidências-de-validação-e2e-sprint-5)
+
+## Entregáveis Fase 4 — Sprint 6-1
+
+Consolidação da documentação arquitetural e auditoria dos READMEs de
+todos os repositórios.
+
+- [ADR-016](adr/ADR-016-database-per-service-hibrido.md),
+  [ADR-017](adr/ADR-017-integracao-mercadopago-webhooks.md),
+  [ADR-018](adr/ADR-018-estrategia-testes-bdd-cobertura.md)
+- [Diagrama geral de componentes — Fase 4](diagram/fase4-componentes.mmd)
+- [Modelo de dados — Fase 4 (database-per-service)](modelo-dados.md#fase-4--database-per-service)
+- Tabela de navegação global padronizada nos 5 repositórios da Fase 4
+  (`oficina-app`, `oficina-messaging-infra`, `oficina-os-service`,
+  `oficina-billing-service`, `oficina-execution-service`).
+
 ## Entregáveis Fase 3
 
 Arquitetura em nuvem (AWS) segregada em 4 repositórios independentes, cada
