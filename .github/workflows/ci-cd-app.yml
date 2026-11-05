@@ -95,7 +95,11 @@ jobs:
   deploy:
     name: Deploy no EKS (Repositorio 3)
     needs: docker-build-push
-    if: github.event_name != 'pull_request'
+    # Pendencia: o cluster EKS (Repositorio 3) foi destruido ao final da
+    # Fase 3 para evitar custo ocioso. Este job so roda quando a variavel
+    # de repositorio EKS_DEPLOY_ENABLED existir e for "true" - ate o
+    # cluster ser recriado, aparece como "skipped", nao "failed".
+    if: ${{ github.event_name != 'pull_request' && vars.EKS_DEPLOY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     environment: production
     steps:
