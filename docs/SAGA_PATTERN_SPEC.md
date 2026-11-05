@@ -214,10 +214,63 @@ saga específica filtrando os logs dos 3 serviços por `correlationId`.
 
 ### Resultado da execução local
 
-<!-- SAGA_E2E_RESULTADO -->
-_Preenchido após a execução real da suíte (depende do Docker Desktop e de
-`aws login` ativo). Ver [`test/saga-e2e/README.md`](../test/saga-e2e/README.md)
-para como rodar._
+Executada de fato em 2026-11-05 contra o SNS/SQS FIFO real (não emulado) e
+Postgres/DynamoDB-local via `docker compose -f docker-compose.saga-e2e.yml`:
+
+```
+Test Suites: 3 passed, 3 total
+Tests:       3 passed, 3 total
+```
+
+Exemplo de trace de um `correlationId` (fluxo feliz, capturado dos logs do
+script — mesma ideia se aplica a qualquer saga real, cruzando com os logs
+JSON dos 3 containers):
+
+```
+correlationId=27102f03-... OS criada
+correlationId=27102f03-... OrcamentoGeradoEvent publicado
+correlationId=27102f03-... Billing criou pagamento mercadoPagoPaymentId=fake-payment-...
+correlationId=27102f03-... PagamentoAprovadoEvent publicado
+correlationId=27102f03-... OS -> APROVADA
+correlationId=27102f03-... Execution criou execucaoId=...
+correlationId=27102f03-... ExecucaoIniciadaEvent publicado
+correlationId=27102f03-... OS -> EM_EXECUCAO
+correlationId=27102f03-... ExecucaoConcluidaEvent publicado
+correlationId=27102f03-... OS -> FINALIZADA (fim)
+```
+
+Essa primeira execução real (a infraestrutura de mensageria nunca tinha
+sido exercitada ponta a ponta entre os 3 processos antes) encontrou 3
+problemas latentes, nunca detectados porque o Docker Desktop não
+funcionava nas Sprints 2-4 e nenhum teste unitário/BDD/e2e isolado batia
+num Postgres real:
+
+1. **`oficina-os-service` e `oficina-execution-service`** — o runtime do
+   Dockerfile roda como usuário sem privilégios (`appuser`), mas o
+   entrypoint executa `npx prisma migrate deploy`, que tenta instalar a
+   CLI `prisma` (devDependency, não copiada por `npm ci --omit=dev`) em
+   `node_modules` — sem permissão de escrita. Corrigido com
+   `chown -R appuser:appgroup /app` antes do `USER appuser` no Dockerfile
+   dos dois serviços.
+2. **`oficina-os-service` e `oficina-execution-service`** — a pasta
+   `prisma/migrations/` nunca tinha sido versionada em nenhum dos dois
+   repositórios (gap desde a Sprint 2/4 respectivamente, só agora exposto
+   por rodar `prisma migrate deploy` contra Postgres real pela primeira
+   vez) — significa que **todo deploy real desses dois serviços sempre
+   falharia** ao criar as tabelas, mascarado até agora porque o Docker
+   Desktop não funcionava e o deploy no EKS ficou sempre `skipped`.
+   Gerada a migration inicial de cada um (`init` no Execution Service);
+   no OS Service, a baseline já incorpora também a correção de
+   `schema.prisma`: `clienteId`/`veiculoId` exigidos como obrigatórios na
+   `OrdemServico`, quando o domínio (`CriarOrdemServicoDto`) sempre
+   permitiu criar uma OS sem cliente/veículo definidos — corrigido para
+   `String?` opcional, migration `clienteid_veiculoid_opcionais`.
+3. **`oficina-billing-service`** — `terraform/.terraform` (686MB de
+   providers em cache) não estava no `.dockerignore`, inflando o contexto
+   de build e causando timeouts/erros de rede no `docker build`.
+
+Todos os 3 cenários passaram depois dessas correções — ver commits
+correspondentes em cada repositório.
 
 ## Fora do escopo (histórico da Sprint 1)
 
