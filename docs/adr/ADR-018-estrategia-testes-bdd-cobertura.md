@@ -63,4 +63,24 @@ alguem fora do time tecnico - motivando a adocao de BDD.
   entre os 3 servicos exige disciplina (nao ha um unico lugar que valide
   que os 3 Gherkins continuam narrando a mesma historia de negocio).
 
+## Atualizacao (Sprint 6-2) - cobertura do repositorio inteiro + SonarCloud
+
+O gate critico (domain/application) sempre esteve em >=80%, mas a
+cobertura do repositorio inteiro de cada servico estava entre 36% e 69%
+(infraestrutura - repositorios Prisma/DynamoDB, consumidor SQS do Saga,
+controllers, observabilidade - nunca tinha teste unitario, so e2e). Para
+atender o edital ("cobertura minima de 80% por servico", sem qualificar
+"critica"), foram adicionados testes unitarios para toda essa
+infraestrutura (com mocks simples, sem dependencia de banco/AWS real),
+elevando a cobertura do repositorio inteiro para 94-96% nos 3 servicos.
+Excecoes legitimas mantidas fora do calculo (mesmo criterio do gate
+critico): codigo gerado pelo Prisma Client, `main.ts`, `*.module.ts` e
+classes de wiring puro sem logica propria (ex: `JwtAuthGuard`).
+
+Adicionalmente, **SonarCloud** foi habilitado nos 3 repositorios (scan
+automatico via CI a cada push/PR), consumindo essa mesma cobertura do
+repositorio inteiro (`coverage/lcov.info`) - nao a Analise Automatica
+nativa do SonarCloud, que foi desativada por nao executar os testes e,
+portanto, nao ter acesso a cobertura real.
+
 Relacionado ao PR #fase4-sprint6-1-documentacao
