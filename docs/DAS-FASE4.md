@@ -5,6 +5,13 @@ Data: 07/11/2026
 Versão: 2.0
 Identificador: DAS-OFICINA-FASE4-001
 
+## Identificação
+
+- **Participante:** Marcos Renan Silva Faria
+- **RM:** 373221
+- **Turma/Curso:** Pós-Tech FIAP — Arquitetura de Sistemas .NET/Java (Fase 4)
+- **Discord:** natsumetks
+
 > Esta DAS substitui, para efeito de avaliação da Fase 4, a versão anterior
 > ([`DAS.md`](DAS.md), v1.0 — MVP com persistência in-memory em um único
 > repositório). O sistema evoluiu através das Fases 1 a 4 até a arquitetura
@@ -244,14 +251,49 @@ Mapeamento de eventos consumidos/publicados por cada serviço no Saga: ver
 seção "Saga Pattern" do README de cada um, e os contratos versionados em
 [`oficina-messaging-infra/contracts/`](https://github.com/marcosrenansilvafaria-afk/oficina-messaging-infra/tree/main/contracts).
 
+## Evidência de deploy automatizado (GitHub Actions)
+
+Execuções reais do pipeline de CI/CD do `oficina-os-service`, do zero
+(lint/test → SonarQube → build/push da imagem Docker → deploy no cluster
+EKS real, provisionado sob demanda na conta AWS Academy), todas com
+conclusão `success`:
+
+| Execução | Commit | Resultado |
+|---|---|---|
+| [Run #42445308542](https://github.com/marcosrenansilvafaria-afk/oficina-os-service/actions/runs/42445308542) | `#5` Adiciona ServiceAccount IRSA para o Saga publicar via SNS | ✅ Lint & Test → SonarQube Scan → Docker Build & Push (GHCR) → **Deploy no EKS**, todos `success` |
+| [Run #42431510061](https://github.com/marcosrenansilvafaria-afk/oficina-os-service/actions/runs/42431510061) | Validação do deploy com RDS/EKS reais | ✅ pipeline completa `success`, incluindo o job de deploy |
+
+Validação pós-deploy (fluxo real via API contra o pod em execução no EKS,
+não apenas o healthcheck):
+`POST /auth/login` → `POST /clientes` → `POST /veiculos` → `POST /os` →
+`POST /os/:id/diagnostico` → `POST /os/:id/item` → `POST /os/:id/orcamento`
+→ evento `OrcamentoGeradoEvent` publicado no tópico SNS FIFO real e
+roteado corretamente (filter policy) para a fila SQS real do Billing
+Service, com `correlationId = ordemServicoId` e payload (itens/valor)
+consistentes com a OS criada.
+
+Durante essa validação foi encontrado e corrigido um problema real de
+autorização: o pod usava, por padrão, a IAM role do *node* do EKS (sem
+permissão `sns:Publish`), em vez de uma identidade própria — corrigido com
+IRSA (IAM Role `oficina-os-service-runtime`, trust no OIDC provider do
+cluster, anexada à policy `oficina-saga-os-service-policy` já existente),
+versionado em
+[`irsa-os-service.tf`](https://github.com/marcosrenansilvafaria-afk/oficina-k8s-infrastructure/blob/main/irsa-os-service.tf)
+(PR [#1](https://github.com/marcosrenansilvafaria-afk/oficina-k8s-infrastructure/pull/1))
+e
+[`k8s/00-service-account.yaml`](https://github.com/marcosrenansilvafaria-afk/oficina-os-service/blob/main/k8s/00-service-account.yaml)
+(PR [#5](https://github.com/marcosrenansilvafaria-afk/oficina-os-service/pull/5)).
+
 ## Evidência em vídeo
 
-Pendente — a ser gravado demonstrando: (1) pipeline de CI/CD rodando do
-zero (lint/test → build → deploy) e (2) o deploy automatizado de pelo
-menos um microsserviço rodando de fato no cluster EKS. Roteiro de
-provisionamento sob demanda (dado o orçamento limitado da conta AWS
-Academy) documentado internamente; link do vídeo será adicionado aqui
-quando gravado.
+Pendente — a ser gravado demonstrando: (1) o pipeline de CI/CD acima
+rodando do zero (lint/test → build → deploy), (2) o deploy automatizado
+do `oficina-os-service` rodando de fato no cluster EKS (`kubectl get
+pods`/`kubectl get hpa`), e (3) o Saga coreografado publicando e roteando
+um evento real entre os microsserviços. Infraestrutura (EKS + RDS)
+provisionada sob demanda (dado o orçamento limitado da conta AWS Academy)
+e destruída após a gravação. Link do vídeo será adicionado aqui quando
+gravado.
 
 ## Referências
 
