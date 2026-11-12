@@ -251,12 +251,13 @@ Mapeamento de eventos consumidos/publicados por cada serviço no Saga: ver
 seção "Saga Pattern" do README de cada um, e os contratos versionados em
 [`oficina-messaging-infra/contracts/`](https://github.com/marcosrenansilvafaria-afk/oficina-messaging-infra/tree/main/contracts).
 
-## Evidência de deploy automatizado (GitHub Actions)
+## Evidência de CI/CD, qualidade e deploy automatizado (GitHub Actions)
 
-Execuções reais do pipeline de CI/CD do `oficina-os-service`, do zero
-(lint/test → SonarQube → build/push da imagem Docker → deploy no cluster
-EKS real, provisionado sob demanda na conta AWS Academy), todas com
-conclusão `success`:
+### Pipeline completa e deploy real no EKS — oficina-os-service
+
+Execuções reais do pipeline de CI/CD, do zero (lint/test → SonarQube →
+build/push da imagem Docker → deploy no cluster EKS real, provisionado
+sob demanda na conta AWS Academy), todas com conclusão `success`:
 
 | Execução | Commit | Resultado |
 |---|---|---|
@@ -264,13 +265,35 @@ conclusão `success`:
 | [Run #42431510061](https://github.com/marcosrenansilvafaria-afk/oficina-os-service/actions/runs/42431510061) | Validação do deploy com RDS/EKS reais | ✅ pipeline completa `success`, incluindo o job de deploy |
 
 Validação pós-deploy (fluxo real via API contra o pod em execução no EKS,
-não apenas o healthcheck):
+não apenas o healthcheck, repetida **depois** do merge da run acima — ou
+seja, contra o deploy oficial da pipeline, não um ajuste manual):
 `POST /auth/login` → `POST /clientes` → `POST /veiculos` → `POST /os` →
 `POST /os/:id/diagnostico` → `POST /os/:id/item` → `POST /os/:id/orcamento`
 → evento `OrcamentoGeradoEvent` publicado no tópico SNS FIFO real e
 roteado corretamente (filter policy) para a fila SQS real do Billing
-Service, com `correlationId = ordemServicoId` e payload (itens/valor)
-consistentes com a OS criada.
+Service. Mensagem real recebida da fila `oficina-saga-billing-service.fifo`
+(via `aws sqs receive-message`):
+
+```json
+{
+  "eventId": "de48a087-80eb-4ebe-80c3-dcf58a09cf89",
+  "eventType": "OrcamentoGeradoEvent",
+  "eventVersion": "1.0",
+  "occurredAt": "2026-11-12T21:47:37.492Z",
+  "correlationId": "90f53b29-c60f-4175-a9f2-7c7263275a4e",
+  "payload": {
+    "ordemServicoId": "90f53b29-c60f-4175-a9f2-7c7263275a4e",
+    "valorTotal": 440,
+    "itens": [{"descricao": "Pastilha de freio", "tipo": "PECA", "preco": 220, "quantidade": 2}],
+    "geradoEm": "2026-11-12T21:47:37.492Z"
+  }
+}
+```
+
+`correlationId` igual ao `id` da Ordem de Serviço criada minutos antes via
+API (`90f53b29-c60f-4175-a9f2-7c7263275a4e`), e `valorTotal`/`itens`
+consistentes com o orçamento gerado — prova de que o Saga coreografado
+publica e roteia eventos reais entre microsserviços, não apenas localmente.
 
 Durante essa validação foi encontrado e corrigido um problema real de
 autorização: o pod usava, por padrão, a IAM role do *node* do EKS (sem
@@ -284,16 +307,65 @@ e
 [`k8s/00-service-account.yaml`](https://github.com/marcosrenansilvafaria-afk/oficina-os-service/blob/main/k8s/00-service-account.yaml)
 (PR [#5](https://github.com/marcosrenansilvafaria-afk/oficina-os-service/pull/5)).
 
-## Evidência em vídeo
+### Pipeline completa (lint/test/SonarQube/build) — os 8 repositórios
 
-Pendente — a ser gravado demonstrando: (1) o pipeline de CI/CD acima
-rodando do zero (lint/test → build → deploy), (2) o deploy automatizado
-do `oficina-os-service` rodando de fato no cluster EKS (`kubectl get
-pods`/`kubectl get hpa`), e (3) o Saga coreografado publicando e roteando
-um evento real entre os microsserviços. Infraestrutura (EKS + RDS)
-provisionada sob demanda (dado o orçamento limitado da conta AWS Academy)
-e destruída após a gravação. Link do vídeo será adicionado aqui quando
-gravado.
+Todos os repositórios têm pipeline própria no GitHub Actions, independente
+dos demais, com pelo menos uma execução recente `success` na branch `main`:
+
+| Repositório | Execução recente com sucesso | Observação |
+|---|---|---|
+| [oficina-db-infrastructure](https://github.com/marcosrenansilvafaria-afk/oficina-db-infrastructure) | [Run #34917882167](https://github.com/marcosrenansilvafaria-afk/oficina-db-infrastructure/actions/runs/34917882167) | Terraform plan/apply do RDS |
+| [oficina-lambda-auth](https://github.com/marcosrenansilvafaria-afk/oficina-lambda-auth) | [Run #34923862398](https://github.com/marcosrenansilvafaria-afk/oficina-lambda-auth/actions/runs/34923862398) | Deploy da Lambda de autenticação |
+| [oficina-k8s-infrastructure](https://github.com/marcosrenansilvafaria-afk/oficina-k8s-infrastructure) | [Run #34925112411](https://github.com/marcosrenansilvafaria-afk/oficina-k8s-infrastructure/actions/runs/34925112411) | Terraform apply do cluster EKS (Lint & Validate + Terraform Apply) |
+| [oficina-app](https://github.com/marcosrenansilvafaria-afk/oficina-app) | [Run #43315766707](https://github.com/marcosrenansilvafaria-afk/oficina-app/actions/runs/43315766707) | Lint/testes + SonarCloud do hub de documentação/observabilidade |
+| [oficina-messaging-infra](https://github.com/marcosrenansilvafaria-afk/oficina-messaging-infra) | [Run #41994353018](https://github.com/marcosrenansilvafaria-afk/oficina-messaging-infra/actions/runs/41994353018) | Terraform apply do broker SNS/SQS |
+| [oficina-os-service](https://github.com/marcosrenansilvafaria-afk/oficina-os-service) | [Run #42445308542](https://github.com/marcosrenansilvafaria-afk/oficina-os-service/actions/runs/42445308542) | Pipeline completa **com deploy real no EKS** (`success`) |
+| [oficina-billing-service](https://github.com/marcosrenansilvafaria-afk/oficina-billing-service) | [Run #42425808824](https://github.com/marcosrenansilvafaria-afk/oficina-billing-service/actions/runs/42425808824) | Lint/Test + SonarQube + Docker Build `success`; job de deploy `skipped` (cluster EKS não provisionado no momento dessa execução — gate `EKS_DEPLOY_ENABLED`) |
+| [oficina-execution-service](https://github.com/marcosrenansilvafaria-afk/oficina-execution-service) | [Run #42425817665](https://github.com/marcosrenansilvafaria-afk/oficina-execution-service/actions/runs/42425817665) | Idem Billing: lint/test/sonar/build `success`, deploy `skipped` pelo mesmo gate |
+
+### Qualidade de código — SonarCloud (todos os repositórios)
+
+| Repositório | Dashboard SonarCloud |
+|---|---|
+| oficina-db-infrastructure | https://sonarcloud.io/dashboard?id=marcosrenansilvafaria-afk_oficina-db-infrastructure |
+| oficina-lambda-auth | https://sonarcloud.io/dashboard?id=marcosrenansilvafaria-afk_oficina-lambda-auth |
+| oficina-k8s-infrastructure | https://sonarcloud.io/dashboard?id=marcosrenansilvafaria-afk_oficina-k8s-infrastructure |
+| oficina-app | https://sonarcloud.io/dashboard?id=marcosrenansilvafaria-afk_oficina-app |
+| oficina-messaging-infra | https://sonarcloud.io/dashboard?id=marcosrenansilvafaria-afk_oficina-messaging-infra |
+| oficina-os-service | https://sonarcloud.io/dashboard?id=marcosrenansilvafaria-afk_oficina-os-service |
+| oficina-billing-service | https://sonarcloud.io/dashboard?id=marcosrenansilvafaria-afk_oficina-billing-service |
+| oficina-execution-service | https://sonarcloud.io/dashboard?id=marcosrenansilvafaria-afk_oficina-execution-service |
+
+### Branch protection e fluxo de Pull Request
+
+Branch `main` protegida (push direto bloqueado, exige PR) confirmada via
+API do GitHub em 7 dos 8 repositórios — apenas `oficina-messaging-infra`
+está sem a proteção configurada. Exemplos de PRs mesclados recentes
+(evidência do fluxo de revisão em uso, não apenas commits diretos):
+
+- `oficina-os-service`: [PR #5](https://github.com/marcosrenansilvafaria-afk/oficina-os-service/pull/5) (IRSA/Saga), [PR #4](https://github.com/marcosrenansilvafaria-afk/oficina-os-service/pull/4) (fix SonarCloud), [PR #3](https://github.com/marcosrenansilvafaria-afk/oficina-os-service/pull/3) (cobertura ≥80%)
+- `oficina-billing-service`: [PR #4](https://github.com/marcosrenansilvafaria-afk/oficina-billing-service/pull/4), [PR #3](https://github.com/marcosrenansilvafaria-afk/oficina-billing-service/pull/3), [PR #2](https://github.com/marcosrenansilvafaria-afk/oficina-billing-service/pull/2)
+- `oficina-execution-service`: [PR #4](https://github.com/marcosrenansilvafaria-afk/oficina-execution-service/pull/4), [PR #3](https://github.com/marcosrenansilvafaria-afk/oficina-execution-service/pull/3), [PR #2](https://github.com/marcosrenansilvafaria-afk/oficina-execution-service/pull/2)
+- `oficina-k8s-infrastructure`: [PR #1](https://github.com/marcosrenansilvafaria-afk/oficina-k8s-infrastructure/pull/1)
+- `oficina-app`: [PR #8](https://github.com/marcosrenansilvafaria-afk/oficina-app/pull/8), [PR #7](https://github.com/marcosrenansilvafaria-afk/oficina-app/pull/7), [PR #6](https://github.com/marcosrenansilvafaria-afk/oficina-app/pull/6)
+- `oficina-messaging-infra`: [PR #1](https://github.com/marcosrenansilvafaria-afk/oficina-messaging-infra/pull/1)
+
+## Checklist de requisitos × evidências
+
+| Requisito | Evidência |
+|---|---|
+| ≥3 microsserviços, cada um em repositório próprio, dono do seu banco | Tabela "Arquitetura de repositórios" acima — [oficina-os-service](https://github.com/marcosrenansilvafaria-afk/oficina-os-service) (PostgreSQL), [oficina-billing-service](https://github.com/marcosrenansilvafaria-afk/oficina-billing-service) (DynamoDB), [oficina-execution-service](https://github.com/marcosrenansilvafaria-afk/oficina-execution-service) (PostgreSQL) |
+| Saga Pattern coreografado, implementado (não apenas descrito) | [RFC-004](rfc/RFC-004-saga-pattern-mensageria.md); contratos de evento em [`oficina-messaging-infra/contracts/`](https://github.com/marcosrenansilvafaria-afk/oficina-messaging-infra/tree/main/contracts); evidência de publish/roteamento real na seção acima (mensagem SQS capturada) |
+| Fluxo completo da OS entre os microsserviços | [SAGA_PATTERN_SPEC.md](SAGA_PATTERN_SPEC.md) + diagramas [fluxo feliz](diagram/fase4-saga-happy-path.mmd) e [compensações](diagram/fase4-saga-compensacao.mmd) |
+| Execução do Saga + tratamento de falha (compensação) | [SAGA_PATTERN_SPEC.md — Evidências de validação E2E](SAGA_PATTERN_SPEC.md#evidências-de-validação-e2e-sprint-5) — 3 cenários (feliz, pagamento recusado, falha de execução) validados contra SNS/SQS/RDS/DynamoDB reais |
+| Testes: unitário + BDD + cobertura ≥80% por serviço, gate no CI | Tabela de cobertura real acima (94-96% nos 3 serviços); runs de CI linkados na seção de evidências (job `Lint & Test`) |
+| Qualidade de código (SonarQube/similar) | Seção "Qualidade de código — SonarCloud" acima, dashboards dos 8 repositórios |
+| CI/CD independente por serviço, deploy automatizado em K8s | Tabela "Pipeline completa" acima; deploy real `success` em [Run #42445308542](https://github.com/marcosrenansilvafaria-afk/oficina-os-service/actions/runs/42445308542) (`oficina-os-service`) |
+| Deploy automatizado com validação de testes (pelo menos 1 microsserviço) | Mesma run acima: `Lint & Test` → `SonarQube Scan` → `Docker Build & Push` → `Deploy no EKS`, todos `success`, nessa ordem, como gate sequencial |
+| Repositórios com branch protegida | Seção "Branch protection e fluxo de Pull Request" acima |
+| Monitoramento/observabilidade de fluxos distribuídos | `correlationId` propagado entre serviços (ver mensagem SQS capturada); `/health` e `/metrics` em cada serviço; [dashboards Grafana](https://github.com/marcosrenansilvafaria-afk/oficina-app/tree/main/observability/dashboards) |
+| Diagrama de arquitetura | Seção "Diagramas de arquitetura" acima |
+| Justificativa da divisão em microsserviços e escolhas tecnológicas | Seção "Arquitetura e tecnologias" acima; [ADR-012](adr/ADR-012-segregacao-4-repositorios-cicd.md), [ADR-016](adr/ADR-016-database-per-service-hibrido.md) |
 
 ## Referências
 
